@@ -1,0 +1,6 @@
+# ds-balance bundle: inserts the host plugin row into the profile.
+# The row registers the /ds-balance command; the client bundle (dsh.client)
+# renders the header widget and reaches the command through remote.commands.
+- insert:
+    - id: ds-balance
+      name: '@dsh-external/ds-balance'
