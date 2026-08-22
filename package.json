@@ -4,6 +4,22 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JovanHE/ds-balance.git"
+  },
+  "homepage": "https://github.com/JovanHE/ds-balance#readme",
+  "bugs": {
+    "url": "https://github.com/JovanHE/ds-balance/issues"
+  },
+  "keywords": [
+    "deepseek",
+    "deepseek-harness",
+    "dsh",
+    "plugin",
+    "balance",
+    "widget"
+  ],
   "main": "lib/index.js",
   "exports": {
     ".": "./lib/index.js",

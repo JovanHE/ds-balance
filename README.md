@@ -1,19 +1,21 @@
 # ds-balance
 
-A minimal DeepSeek account balance widget for the [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (`dsh`) web GUI. A pill in the session header shows your DeepSeek account balance, auto-refreshes every 60 seconds, refreshes on click, and turns red with a reason on failure.
+A minimal **DeepSeek account balance widget** for the [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (`dsh`) web GUI. A compact pill in the session header shows your current DeepSeek account balance, auto-refreshes, and updates on click.
+
+![ds-balance widget in the session header](assets/widget-screenshot.png)
 
 ## Features
 
-- Shows the DeepSeek account total balance (multi-currency aware, e.g. `CNY ¥6.44`).
-- Hover for a breakdown: total / granted / topped-up balance.
-- Auto-refresh every 60s; click to refresh immediately.
-- Reads `DEEPSEEK_API_KEY` from the DSH credential store (`~/.dsh/.credentials.yaml` or the environment). The key travels in the subprocess environment — never in the command line, source, or browser.
-- Idempotent: a read-only HTTPS GET, run under an explicit `danger-full-access` policy (the balance endpoint needs an `Authorization` header, and DSH's default `workspace-write` sandbox has no usable backend on Windows).
+- **Live balance pill** in the session header (right side): shows currency and total balance, e.g. `DS CNY 3.65`.
+- **Auto-refresh** every 60 seconds; **click** to refresh immediately.
+- **Hover for details** — total / granted / topped-up breakdown, multi-currency aware.
+- **Secret-safe** — reads `DEEPSEEK_API_KEY` from the DSH credential seam (`~/.dsh/.credentials.yaml` or the environment). The key travels only in the subprocess environment, never in the command line, source, or browser.
+- **Read-only & idempotent** — a single HTTPS GET to the balance endpoint.
 
 ## Install
 
 ```bash
-dsh plugin --profile web add github:<your-name>/ds-balance
+dsh plugin --profile web add github:JovanHE/ds-balance
 ```
 
 Or from a local checkout:
@@ -22,25 +24,49 @@ Or from a local checkout:
 dsh plugin --profile web add /path/to/ds-balance
 ```
 
-Restart `dsh web` after installing (client plugin discovery only runs at process start).
+Restart `dsh web` after installing — client plugin discovery only runs at process start.
 
 ## Usage
 
-Zero configuration. As long as `DEEPSEEK_API_KEY` is configured, the widget appears at the right of every session header.
+Zero configuration. As long as `DEEPSEEK_API_KEY` is set (in the DSH credential store, a `.env`, or the environment), the widget appears at the right of every session header.
 
-## Layout
-
-```
-lib/
-  index.js    Host half: resolve key → call the balance API → register /ds-balance command
-  client.js   Client half: header pill widget (bundle loader contract)
-package.json  declares dsh.bundle + dsh.client
-cordis.patch.yml  inserts the host plugin row
-```
+- Click the pill to refresh.
+- Hover it to see the full breakdown.
+- If the key is missing or the request fails, the pill turns red and shows the reason in its tooltip.
 
 ## How it works
 
-The host half resolves `DEEPSEEK_API_KEY` via `ctx.get("credentials")`, then calls `GET https://api.deepseek.com/user/balance` through `ctx.shell` (pwsh on Windows), invoking `Invoke-RestMethod`. The client reaches the host `/ds-balance` command through `ctx.remote.commands` and renders the JSON as a pill.
+```
+client (browser)                         host (dsh process)
+─────────────────                        ─────────────────
+header pill  ── ctx.remote.commands ──>  /ds-balance command
+   │                                             │
+   └── parse JSON  <── result text ──────────────┘
+                                              resolve DEEPSEEK_API_KEY (ctx.get("credentials"))
+                                              GET https://api.deepseek.com/user/balance
+                                              (ctx.shell / pwsh Invoke-RestMethod)
+```
+
+- **Host half** (`lib/index.js`) resolves the key via `ctx.get("credentials")`, then calls the DeepSeek balance endpoint through `ctx.shell` — the endpoint needs an `Authorization` header that the fetch seam cannot carry, so it runs `Invoke-RestMethod` in a subprocess under an explicit `danger-full-access` policy (the deployment's default confinement has no usable sandbox backend on Windows, and this call only reads). It registers a `/ds-balance` command.
+- **Client half** (`lib/client.js`) registers a pill in the `conversation.session.header.utilities` slot and reaches the host through `ctx.remote.commands`, then parses the returned JSON. In a bundle client the `host`/`styles` globals are not available (those are dynamic-plugin builtins), so it injects its stylesheet via `document` and uses `ctx.remote` — mirroring the shipped bundle conventions.
+
+## Project structure
+
+```
+lib/
+  index.js          Host half: resolve key → call balance API → register /ds-balance command
+  client.js         Client half: header pill widget (bundle loader contract)
+assets/
+  widget-screenshot.png   Screenshot of the widget in the GUI
+package.json        declares dsh.bundle + dsh.client
+cordis.patch.yml    inserts the host plugin row
+```
+
+## Requirements
+
+- DeepSeek Harness (`dsh`) web profile
+- Node.js ≥ 20
+- A configured `DEEPSEEK_API_KEY` credential
 
 ## License
 
