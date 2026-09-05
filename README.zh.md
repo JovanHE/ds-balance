@@ -1,5 +1,7 @@
 # ds-balance
 
+**[English](README.md) | 简体中文**
+
 一个极简的 **DeepSeek 账户余额小组件**，运行在 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（`dsh`）Web 界面里：会话头部右侧显示一个胶囊，展示 DeepSeek 账户余额，每 60 秒自动刷新，点击立即刷新。
 
 ![ds-balance 在会话头部的效果](assets/widget-screenshot.png)

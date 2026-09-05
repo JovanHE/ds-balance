@@ -1,5 +1,7 @@
 # ds-balance
 
+**[简体中文](README.zh.md) | English**
+
 A minimal **DeepSeek account balance widget** for the [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (`dsh`) web GUI. A compact pill in the session header shows your current DeepSeek account balance, auto-refreshes, and updates on click.
 
 ![ds-balance widget in the session header](assets/widget-screenshot.png)
