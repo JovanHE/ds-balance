@@ -41,22 +41,22 @@ dsh plugin --profile web add /path/to/ds-balance
 ```
 客户端（浏览器）                        宿主（dsh 进程）
 ─────────────────                        ─────────────────
-头部胶囊  ── ctx.remote.commands ──>  /ds-balance 命令
+头部胶囊  ── GET /__ds-balance ────>  路由处理器
    │                                             │
-   └── 解析 JSON  <── 结果文本 ──────────────────┘
+   └── 解析 JSON  <────── JSON ────────────────┘
                                              解析 DEEPSEEK_API_KEY（ctx.get("credentials")）
                                              GET https://api.deepseek.com/user/balance
                                              （ctx.shell / pwsh Invoke-RestMethod）
 ```
 
-- **宿主半部**（`lib/index.js`）：通过 `ctx.get("credentials")` 解析密钥，再经 `ctx.shell` 调用余额接口——该接口需要 `Authorization` 头，而 fetch 通道无法携带，因此以子进程 `Invoke-RestMethod` 执行，并显式使用 `danger-full-access` 策略（部署默认的 `workspace-write` 沙箱在 Windows 上无可用后端，且此调用只读）。它注册一个 `/ds-balance` 命令。
-- **客户端半部**（`lib/client.js`）：在 `conversation.session.header.utilities` 槽位注册胶囊，并透过 `ctx.remote.commands` 调用宿主命令、解析返回的 JSON。bundle 客户端里没有动态插件才有的 `host`/`styles` 全局，因此用 `document` 注入样式、走 `ctx.remote` —— 与官方 bundle 惯例一致。
+- **宿主半部**（`lib/index.js`）：通过 `ctx.get("credentials")` 解析密钥，再经 `ctx.shell` 调用余额接口——该接口需要 `Authorization` 头，而 fetch 通道无法携带，因此以子进程 `Invoke-RestMethod` 执行，并显式使用 `danger-full-access` 策略（部署默认的 `workspace-write` 沙箱在 Windows 上无可用后端，且此调用只读）。它通过 `ctx.webServer` 注册 `/__ds-balance` HTTP 路由。
+- **客户端半部**（`lib/client.js`）：在 `conversation.session.header.utilities` 槽位注册胶囊，直接 `fetch` 同源 `/__ds-balance` 并渲染返回的 JSON。普通同源 fetch **不会产生任何会话事件**，所以小组件每 60 秒的自动刷新不会污染对话或会话日志（若走命令派发，每次刷新都会写入 `command/run` + `command/done` 记录）。bundle 客户端里没有动态插件才有的 `host`/`styles` 全局，因此用 `document` 注入样式。
 
 ## 项目结构
 
 ```
 lib/
-  index.js          Host 半部：解析密钥 → 调用余额接口 → 注册 /ds-balance 命令
+  index.js          Host 半部：解析密钥 → 调用余额接口 → 注册 /__ds-balance 路由
   client.js         客户端半部：会话头部胶囊小组件（bundle loader 契约）
 assets/
   widget-screenshot.png   小组件在 GUI 里的效果截图

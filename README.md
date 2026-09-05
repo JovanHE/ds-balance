@@ -41,22 +41,22 @@ Zero configuration. As long as `DEEPSEEK_API_KEY` is set (in the DSH credential 
 ```
 client (browser)                         host (dsh process)
 ─────────────────                        ─────────────────
-header pill  ── ctx.remote.commands ──>  /ds-balance command
+header pill  ── GET /__ds-balance ────>  route handler
    │                                             │
-   └── parse JSON  <── result text ──────────────┘
+   └── parse JSON  <────── JSON ────────────────┘
                                               resolve DEEPSEEK_API_KEY (ctx.get("credentials"))
                                               GET https://api.deepseek.com/user/balance
                                               (ctx.shell / pwsh Invoke-RestMethod)
 ```
 
-- **Host half** (`lib/index.js`) resolves the key via `ctx.get("credentials")`, then calls the DeepSeek balance endpoint through `ctx.shell` — the endpoint needs an `Authorization` header that the fetch seam cannot carry, so it runs `Invoke-RestMethod` in a subprocess under an explicit `danger-full-access` policy (the deployment's default confinement has no usable sandbox backend on Windows, and this call only reads). It registers a `/ds-balance` command.
-- **Client half** (`lib/client.js`) registers a pill in the `conversation.session.header.utilities` slot and reaches the host through `ctx.remote.commands`, then parses the returned JSON. In a bundle client the `host`/`styles` globals are not available (those are dynamic-plugin builtins), so it injects its stylesheet via `document` and uses `ctx.remote` — mirroring the shipped bundle conventions.
+- **Host half** (`lib/index.js`) resolves the key via `ctx.get("credentials")`, then calls the DeepSeek balance endpoint through `ctx.shell` — the endpoint needs an `Authorization` header that the fetch seam cannot carry, so it runs `Invoke-RestMethod` in a subprocess under an explicit `danger-full-access` policy (the deployment's default confinement has no usable sandbox backend on Windows, and this call only reads). It registers the `/__ds-balance` HTTP route via `ctx.webServer`.
+- **Client half** (`lib/client.js`) registers a pill in the `conversation.session.header.utilities` slot and fetches `/__ds-balance` on its own origin, then renders the JSON. A plain same-origin fetch mints **no session events**, so the widget's 60s auto-refresh never pollutes the conversation or session log (dispatching a command would write `command/run` + `command/done` records on every refresh). In a bundle client the `host`/`styles` globals are not available (those are dynamic-plugin builtins), so it injects its stylesheet via `document`.
 
 ## Project structure
 
 ```
 lib/
-  index.js          Host half: resolve key → call balance API → register /ds-balance command
+  index.js          Host half: resolve key → call balance API → register /__ds-balance route
   client.js         Client half: header pill widget (bundle loader contract)
 assets/
   widget-screenshot.png   Screenshot of the widget in the GUI
